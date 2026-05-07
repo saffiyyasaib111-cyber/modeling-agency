@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AURA // 2026 DIGITAL AVANT-GARDE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap');
+
+        :root {
+            --neon-blue: #00f2ff;
+            --deep-black: #050505;
+        }
+
+        body {
+            background-color: var(--deep-black);
+            color: #fff;
+            font-family: 'Cormorant Garamond', serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .heading-font { font-family: 'Syncopate', sans-serif; }
+
+        .glass-navbar {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* CHATBOT REFIX: Increased Z-Index & Fixed Sizing */
+        #chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 999; /* Ensures it is always clickable */
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        #chat-window {
+            width: clamp(280px, 85vw, 380px);
+            max-height: 60vh; /* Prevents cutting off top on mobile */
+            background: rgba(10, 10, 10, 0.98);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            border-radius: 20px;
+            margin-bottom: 15px;
+            display: none; /* Controlled by JS */
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.9);
+        }
+
+        #chat-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+        }
+
+        .msg {
+            padding: 10px 15px;
+            border-radius: 12px;
+            font-size: 14px;
+            max-width: 85%;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .msg-agent { background: rgba(0, 242, 255, 0.05); border: 1px solid rgba(0, 242, 255, 0.2); align-self: flex-start; }
+        .msg-user { background: rgba(255,255,255,0.08); align-self: flex-end; border: 1px solid rgba(255,255,255,0.1); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* SEARCH OVERLAY */
+        #search-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5, 5, 5, 0.98);
+            backdrop-filter: blur(30px);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            transition: opacity 0.4s ease;
+        }
+
+        /* THE MODEL STAGE */
+        .model-stage {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            perspective: 1000px;
+        }
+
+        .rotating-model-wrap {
+            width: 70vw;
+            height: 40vh;
+            max-width: 350px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: infiniteSpin 12s linear infinite;
+        }
+
+        .model-motion {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, var(--neon-blue), #7000ff);
+            clip-path: polygon(50% 0%, 80% 10%, 90% 35%, 70% 45%, 85% 70%, 75% 100%, 25% 100%, 15% 70%, 30% 45%, 10% 35%, 20% 10%);
+            filter: blur(1px) drop-shadow(0 0 20px var(--neon-blue));
+            opacity: 0.6;
+        }
+
+        @keyframes infiniteSpin {
+            from { transform: rotateY(0deg) rotateX(10deg); }
+            to { transform: rotateY(360deg) rotateX(10deg); }
+        }
+
+        @media (max-width: 768px) {
+            .nav-hide { display: none; }
+            .hero-title { font-size: 20vw !important; opacity: 0.03; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="chat-widget">
+        <div id="chat-window">
+            <div class="chat-header p-4 bg-white/5 border-b border-white/10 flex justify-between items-center">
+                <span class="heading-font text-[9px] tracking-widest uppercase text-cyan-400">Aura Concierge</span>
+                <button onclick="toggleChat()"><i data-lucide="chevron-down" class="w-4 h-4 opacity-50"></i></button>
+            </div>
+            <div id="chat-messages">
+                <div class="msg msg-agent">Welcome to AURA. How can I assist with your enquiry?</div>
+            </div>
+            <div class="p-4 border-t border-white/10">
+                <input type="text" id="chat-input" placeholder="Type a message..." class="bg-transparent w-full text-sm outline-none italic text-white" onkeypress="handleChat(event)">
+            </div>
+        </div>
+        <button onclick="toggleChat()" class="bg-cyan-500 text-black p-4 rounded-full shadow-2xl hover:scale-105 active:scale-95 transition-all">
+            <i data-lucide="message-circle" id="chat-icon"></i>
+        </button>
+    </div>
+
+    <div id="search-overlay">
+        <button onclick="toggleSearch()" class="absolute top-8 right-8 text-white/40 hover:text-white">
+            <i data-lucide="x" class="w-8 h-8"></i>
+        </button>
+        <div class="w-full max-w-2xl text-center space-y-6">
+            <input type="text" id="search-input" class="bg-transparent border-b border-cyan-500/30 text-3xl md:text-5xl w-full outline-none text-center italic" placeholder="Search..." oninput="showNoResults()">
+            <p id="no-results" class="heading-font text-[10px] tracking-[0.5em] text-white/20 opacity-0 transition-opacity">No results found.</p>
+        </div>
+    </div>
+
+    <nav class="fixed top-0 w-full z-[100] glass-navbar">
+        <div class="max-w-screen-2xl mx-auto px-6 h-16 md:h-20 flex justify-between items-center">
+            <a href="index.html" class="heading-font text-lg md:text-xl font-black italic tracking-tighter">AURA<span class="text-cyan-500">.</span></a>
+            
+            <div class="nav-hide flex items-center space-x-10">
+                <a href="portfolios.html" class="text-[9px] font-bold uppercase tracking-[0.3em] text-white/50 hover:text-cyan-400 transition-all">Portfolios</a>
+                <a href="apply.html" class="text-[9px] font-bold uppercase tracking-[0.3em] text-white/50 hover:text-cyan-400 transition-all">Apply</a>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleSearch()" class="text-white/40 hover:text-cyan-400 transition-colors"><i data-lucide="search" class="w-5 h-5"></i></button>
+                <a href="menu.html" class="flex items-center space-x-2 bg-white/5 border border-white/10 px-4 py-2 rounded">
+                    <span class="heading-font text-[9px] tracking-widest uppercase">Menu</span>
+                    <i data-lucide="menu" class="w-4 h-4 text-cyan-400"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative h-screen flex flex-col items-center justify-center">
+        <div class="model-stage">
+            <div class="rotating-model-wrap">
+                <div class="model-motion"></div>
+            </div>
+        </div>
+
+        <div class="z-10 text-center px-6">
+            <h2 class="heading-font text-[9px] md:text-xs tracking-[1em] text-cyan-400 uppercase mb-4">Established 2026</h2>
+            <h1 class="text-4xl md:text-8xl font-light leading-none max-w-5xl mb-12">The Future of <span class="italic font-semibold">Talent</span> Architecture</h1>
+            
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-6">
+                <a href="portfolios.html" class="bg-white text-black px-12 py-4 text-[9px] font-black uppercase tracking-[0.4em] hover:bg-cyan-500 transition-all w-full sm:w-auto text-center">Enter Portfolio</a>
+                <a href="apply.html" class="text-white border border-white/10 px-12 py-4 text-[9px] font-black uppercase tracking-[0.4em] hover:bg-white/5 transition-all w-full sm:w-auto text-center">Apply Now</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // REFIXED CHAT LOGIC
+        function toggleChat() {
+            const win = document.getElementById('chat-window');
+            const input = document.getElementById('chat-input');
+            const isHidden = window.getComputedStyle(win).display === 'none';
+            
+            win.style.display = isHidden ? 'flex' : 'none';
+            if(isHidden) input.focus();
+        }
+
+        function handleChat(e) {
+            if (e.key === 'Enter' && e.target.value.trim() !== "") {
+                const area = document.getElementById('chat-messages');
+                const val = e.target.value.trim();
+                
+                const userMsg = document.createElement('div');
+                userMsg.className = 'msg msg-user';
+                userMsg.innerText = val;
+                area.appendChild(userMsg);
+                e.target.value = "";
+                area.scrollTop = area.scrollHeight;
+
+                setTimeout(() => {
+                    const agentMsg = document.createElement('div');
+                    agentMsg.className = 'msg msg-agent';
+                    agentMsg.innerText = getBotResponse(val.toLowerCase());
+                    area.appendChild(agentMsg);
+                    area.scrollTop = area.scrollHeight;
+                }, 800);
+            }
+        }
+
+        function getBotResponse(input) {
+            if (input.includes("hi") || input.includes("hello")) return "Greetings. How can Aura assist your brand today?";
+            if (input.includes("apply")) return "We are currently accepting new talent. Please visit the Apply page.";
+            if (input.includes("portfolio")) return "Our curated rosters are available in the Portfolio section.";
+            if (input.includes("contact")) return "Reach us at saffiyyasaib111@gmail.com for direct enquiries.";
+            return "That's a unique perspective. Aura focuses on exactly that kind of vision. Anything else I can help with?";
+        }
+
+        // SEARCH LOGIC
+        function toggleSearch() {
+            const overlay = document.getElementById('search-overlay');
+            const isHidden = window.getComputedStyle(overlay).display === 'none';
+            overlay.style.display = isHidden ? 'flex' : 'none';
+            if(isHidden) {
+                overlay.style.opacity = '1';
+                document.getElementById('search-input').focus();
+            }
+        }
+
+        function showNoResults() {
+            const input = document.getElementById('search-input');
+            document.getElementById('no-results').style.opacity = input.value.length > 0 ? '1' : '0';
+        }
+    </script>
+</body>
+</html>
